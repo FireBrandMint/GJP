@@ -12,14 +12,11 @@ using System.Runtime.CompilerServices;
 public class Shape: XYBoolHolder
 {
     /// <summary>
-    /// Value that determines entity ID, please change
-    /// this value back to the original of the tick wich
-    /// you're loading state, and also the IDNEXT of the
-    /// EntityCommand class.
+    /// Value that determines entity ID, please, if you're using GGPO change
+    /// this value back to the original of the original tick wich
+    /// you're loading state from, and also the IDNEXT of the
+    /// DeterministicSimulation.
     /// </summary>
-    public static int IDNEXT = 0;
-
-    public bool IDSet = false;
     
     int _ID;
 
@@ -30,24 +27,25 @@ public class Shape: XYBoolHolder
         set 
         {
 
-            if(IDSet && Active)
+            if(Active)
             {
                 if(_ID == value) return;
-                _ID = value;
+
                 Deactivate();
+                _ID = value;
                 Activate();
                 return;
             }
 
             _ID = value;
-
-            IDSet = true;
         }
     }
 
-    private static XYList<Shape> ShapeGrid = new XYList<Shape>(64, 1000, 10);
+    bool Disposed = false;
 
-    #region static grid
+    #region grid AKA simulation
+
+    private DtCollisionSimulation Simulation = null;
 
     bool Active = false;
 
@@ -56,7 +54,7 @@ public class Shape: XYBoolHolder
     /// </summary>
     public CollisionAntenna ObjectUsingIt = null;
 
-    public static long [] GridAddShape (Shape s)
+    public static long [] GridAddShape (Shape s, XYList<Shape> shapeGrid)
     {
         Vector2 pos = s.Position;
 
@@ -66,10 +64,10 @@ public class Shape: XYBoolHolder
 
         Vector2 bottomRight = pos + range;
 
-        return ShapeGrid.AddNode(s, topLeft, bottomRight);
+        return shapeGrid.AddNode(s, topLeft, bottomRight);
     }
 
-    public static long[] GridMoveShape (Shape s)
+    public static long[] GridMoveShape (Shape s, XYList<Shape> shapeGrid)
     {
         long[] pastIdentifier = s.GetGridIdentifier();
 
@@ -81,7 +79,7 @@ public class Shape: XYBoolHolder
 
         Vector2 bottomRight = pos + range;
 
-        long[] currIdentifier = ShapeGrid.GetRanges(topLeft, bottomRight);
+        long[] currIdentifier = shapeGrid.GetRanges(topLeft, bottomRight);
 
         bool different = false;
 
@@ -92,27 +90,27 @@ public class Shape: XYBoolHolder
 
         if(different)
         {
-            ShapeGrid.RemoveValue(pastIdentifier, s);
+            shapeGrid.RemoveValue(pastIdentifier, s);
 
-            return ShapeGrid.AddNode(s, currIdentifier);
+            return shapeGrid.AddNode(s, currIdentifier);
         }
 
         return pastIdentifier;
     }
 
-    public static void GridRemoveShape (Shape s)
+    public static void GridRemoveShape (Shape s, XYList<Shape> shapeGrid)
     {
-        ShapeGrid.RemoveValue(s.GetGridIdentifier(), s);
+        shapeGrid.RemoveValue(s.GetGridIdentifier(), s);
     }
 
-    public static Shape[] GetShapesInGrid (long[] identifier)
+    public static Shape[] GetShapesInGrid (long[] identifier, XYList<Shape> shapeGrid)
     {
-        return ShapeGrid.GetValues(identifier);
+        return shapeGrid.GetValues(identifier);
     }
 
-    public static Shape[] GetShapesInGrid (Shape s)
+    public static Shape[] GetShapesInGrid (Shape s, XYList<Shape> shapeGrid)
     {
-        return ShapeGrid.GetValues(s.GetGridIdentifier());
+        return shapeGrid.GetValues(s.GetGridIdentifier());
     }
 
     #endregion
@@ -122,9 +120,11 @@ public class Shape: XYBoolHolder
 
     public virtual Vector2 Position{get;set;}
 
-    public int CollisionRepetition = 1;
-
-    public bool Solid = false;
+    /// <summary>
+    /// Wether or not it does not solve collisions and instead
+    /// just detects if another object is inside.
+    /// </summary>
+    public bool IntersectOnly = false;
 
     ///<summary>
     ///Range is a vector
@@ -137,17 +137,33 @@ public class Shape: XYBoolHolder
 
     public virtual void SetGridIdentifier(long[] newValue) => throw new NotImplementedException();
 
+    public void SetSimulation(DtCollisionSimulation _simulation, bool makeNewId = true, int _id = -1)
+    {
+        if(Simulation != null && Active)
+        {
+            Deactivate();
+
+            if(_simulation != null && makeNewId) ID = _simulation.GetId();
+            else ID = _id;
+
+            Simulation = _simulation;
+            if (_simulation != null) Activate();
+            return;
+        }
+
+        if(_simulation != null && makeNewId) ID = _simulation.GetId();
+        else ID = _id;
+
+        Simulation = _simulation;
+    } 
+
     public void Activate()
     {
+        if(Simulation == null) return;
+
         if(!Active)
         {
-            if(!IDSet)
-            {
-                ID = IDNEXT;
-                ++IDNEXT;
-            }
-
-            SetGridIdentifier(GridAddShape(this));
+            SetGridIdentifier(GridAddShape(this, Simulation.Grid));
         }
 
         Active = true;
@@ -155,14 +171,16 @@ public class Shape: XYBoolHolder
 
     public void Deactivate()
     {
-        if(Active) GridRemoveShape(this);
+        if(Simulation == null) return;
+
+        if(Active && Simulation != null) GridRemoveShape(this, Simulation.Grid);
         
         Active = false;
     }
 
     public void MoveActive()
     {
-        if(Active) SetGridIdentifier(GridMoveShape(this));
+        if(Active && Simulation != null) SetGridIdentifier(GridMoveShape(this, Simulation.Grid));
     }
 
     public bool IsActive() => Active;
@@ -350,5 +368,29 @@ public class Shape: XYBoolHolder
 
         //If no change in direction, then on same side of all segments, and thus inside
         return true;
+    }
+
+    public void Dispose ()
+    {
+        if (Disposed) return;
+        
+        Dispose(true);
+
+        ObjectUsingIt = null;
+
+        SetSimulation(null);
+
+        Disposed = true;
+    }
+
+    protected virtual void Dispose (bool disposing)
+    {
+        //TODO: Implement object pooling for non cataclismic failure on the computer
+        //on top of this convoluted code, if it's ugly, at least it gotta be
+        //optimized........
+
+        //TODO: Reminding myself to do object pooling for the XYList too,
+        //whoever doesn't want their pc to explode with a big game would
+        //would much appreciate it.
     }
 }

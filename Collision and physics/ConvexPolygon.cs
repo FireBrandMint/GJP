@@ -86,7 +86,7 @@ public sealed class ConvexPolygon : Shape
 
     public Vector2 Range;
 
-    public static ConvexPolygon CreateRect(Vector2 length, Vector2 scale, FInt rotation, Vector2 position)
+    public static ConvexPolygon CreateRect(Vector2 length, Vector2 scale, FInt rotation, Vector2 position, CollisionAntenna objectUsingIt)
     {
         FInt x = length.x * FInt.Half;
         FInt y = length.y * FInt.Half;
@@ -105,11 +105,12 @@ public sealed class ConvexPolygon : Shape
             },
             position,
             scale,
-            rotation
+            rotation,
+            objectUsingIt
             );
     }
     
-    public static ConvexPolygon CreateTriangle(Vector2 length, Vector2 scale, FInt rotation, Vector2 position)
+    public static ConvexPolygon CreateTriangle(Vector2 length, Vector2 scale, FInt rotation, Vector2 position, CollisionAntenna objectUsingIt)
     {
         FInt x = length.x * FInt.Half;
         FInt y = length.y * FInt.Half;
@@ -126,11 +127,12 @@ public sealed class ConvexPolygon : Shape
             },
             position,
             scale,
-            rotation
+            rotation,
+            objectUsingIt
             );
     }
 
-    public ConvexPolygon(Vector2[] model, Vector2 position, Vector2 scale, FInt rotation)
+    public ConvexPolygon(Vector2[] model, Vector2 position, Vector2 scale, FInt rotation, CollisionAntenna _objectUsingIt)
     {
         OriginalModel = model;
 
@@ -143,6 +145,8 @@ public sealed class ConvexPolygon : Shape
         ResultModel = new Vector2[model.Length];
 
         Normals = new Vector2[model.Length];
+
+        ObjectUsingIt = _objectUsingIt;
 
         //ModelAction = UpdateModel;
 
@@ -576,6 +580,8 @@ public sealed class ConvexPolygon : Shape
         //if it colides with any of the poly's lines
         //OR if the circle itself is inside the polygon
 
+        result.Separation = Vector2.ZERO;
+
         Vector2 polyPos = Position;
 
         Vector2[] vertsRaw = GetModel();
@@ -595,58 +601,61 @@ public sealed class ConvexPolygon : Shape
 
         FInt circleAreaSquared = circleArea * circleArea;
 
-        FInt lowestDistanceSqr = FInt.MaxValue;
-
-        Vector2 lineColPoint = new Vector2();
-
-        for(int i1 = 0; i1 < vertsAmount; ++i1)
+        for(int i12 = 0; i12 < 2; ++i12)
         {
-            int i2 = (i1 + 1) % vertsAmount;
+            FInt lowestDistanceSqr = FInt.MaxValue;
 
-            Vector2 colPoint;
+            Vector2 lineColPoint = new Vector2();
 
-            FInt distSquared = Vector2.LinePointDistSqr(verts[i1], verts[i2], circlePos, out colPoint);
-
-            if(distSquared < lowestDistanceSqr)
+            for(int i1 = 0; i1 < vertsAmount; ++i1)
             {
-                lineColPoint = colPoint;
-                lowestDistanceSqr = distSquared;
+                int i2 = (i1 + 1) % vertsAmount;
+
+                Vector2 colPoint;
+
+                FInt distSquared = Vector2.LinePointDistSqr(verts[i1], verts[i2], circlePos, out colPoint);
+
+                if(distSquared < lowestDistanceSqr)
+                {
+                    lineColPoint = colPoint;
+                    lowestDistanceSqr = distSquared;
+                }
             }
+
+            bool IsInside = PointInConvexPolygon(circlePos, verts);
+
+            if(lowestDistanceSqr > circleAreaSquared && !IsInside)
+            {
+                result.Intersects = false;
+                return;
+            }
+
+            if(IsInside)
+            {
+                //The direction from the line to the circle middle.
+                var direction = circlePos - lineColPoint;
+
+                var dir = direction.Normalized();
+
+                result.Separation += dir * (circleArea + DeterministicMath.Sqrt(lowestDistanceSqr));
+
+                result.SeparationDirection = dir;
+            }
+            else
+            {
+
+                //The direction from the circle middle to the line.
+                var direction = lineColPoint - circlePos;
+
+                var dir = direction.Normalized();
+
+                result.Separation += dir * (circleArea - DeterministicMath.Sqrt(lowestDistanceSqr));
+
+                result.SeparationDirection = dir;
+            }
+
+            circlePos -= result.Separation;
         }
-
-        bool IsInside = PointInConvexPolygon(circlePos, verts);
-
-        if(lowestDistanceSqr > circleAreaSquared && !IsInside)
-        {
-            result.Intersects = false;
-            return;
-        }
-
-        if(IsInside)
-        {
-            //The direction from the line to the circle middle.
-            var direction = circlePos - lineColPoint;
-
-            var dir = direction.Normalized();
-
-            result.Separation = dir * (circleArea + DeterministicMath.Sqrt(lowestDistanceSqr));
-
-            result.SeparationDirection = dir;
-        }
-        else
-        {
-
-            //The direction from the circle middle to the line.
-            var direction = lineColPoint - circlePos;
-
-            var dir = direction.Normalized();
-
-            result.Separation = dir * (circleArea - DeterministicMath.Sqrt(lowestDistanceSqr));
-
-            result.SeparationDirection = dir;
-        }
-
-        
 
         result.Intersects = true;
     }

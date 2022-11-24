@@ -35,13 +35,13 @@ public sealed class CircleShape: Shape
 
     long[] GridIdentifier;
 
-    public CircleShape (Vector2 position, FInt area)
+    public CircleShape (Vector2 position, FInt area, CollisionAntenna _objectUsingIt)
     {
         _Area = area;
 
         _Position = position;
 
-        CollisionRepetition = 2;
+        ObjectUsingIt = _objectUsingIt;
     }
 
     public override sealed Vector2 GetRange()
@@ -150,6 +150,8 @@ public sealed class CircleShape: Shape
         //if it colides with any of the poly's lines
         //OR if the circle itself is inside the polygon
 
+        result.Separation = Vector2.ZERO;
+
         Vector2 polyPos = poly.Position;
 
         Vector2[] vertsRaw = poly.GetModel();
@@ -169,49 +171,62 @@ public sealed class CircleShape: Shape
 
         FInt circleAreaSquared = circleArea * circleArea;
 
-        FInt lowestDistanceSqr = FInt.MaxValue;
-
-        Vector2 lineColPoint = new Vector2();
-
-        for(int i1 = 0; i1 < vertsAmount; ++i1)
+        for(int i12 = 0; i12 < 2; ++i12)
         {
-            int i2 = (i1 + 1) % vertsAmount;
+            FInt lowestDistanceSqr = FInt.MaxValue;
 
-            Vector2 colPoint;
+            Vector2 lineColPoint = new Vector2();
 
-            FInt distSquared = Vector2.LinePointDistSqr(verts[i1], verts[i2], circlePos, out colPoint);
-
-            if(distSquared < lowestDistanceSqr)
+            for(int i1 = 0; i1 < vertsAmount; ++i1)
             {
-                lineColPoint = colPoint;
-                lowestDistanceSqr = distSquared;
+                int i2 = (i1 + 1) % vertsAmount;
+
+                Vector2 colPoint;
+
+                FInt distSquared = Vector2.LinePointDistSqr(verts[i1], verts[i2], circlePos, out colPoint);
+
+                if(distSquared < lowestDistanceSqr)
+                {
+                    lineColPoint = colPoint;
+                    lowestDistanceSqr = distSquared;
+                }
             }
-        }
 
-        bool IsInside = PointInConvexPolygon(circlePos, verts);
+            bool IsInside = PointInConvexPolygon(circlePos, verts);
 
-        if(lowestDistanceSqr > circleAreaSquared && !IsInside)
-        {
-            result.Intersects = false;
-            return;
-        }
+            if(lowestDistanceSqr > circleAreaSquared && !IsInside)
+            {
+                result.Intersects = false;
+                return;
+            }
 
-        FInt factor = new FInt();
-        factor.RawValue = 4150;
+            FInt factor = new FInt();
+            factor.RawValue = 4150;
 
-        if(IsInside)
-        {
-            //The direction from the circle to the line.
-            var direction = lineColPoint - circlePos;
+            if(IsInside)
+            {
+                //The direction from the circle to the line.
+                var direction = lineColPoint - circlePos;
 
-            result.Separation = direction.Normalized() * (circleArea + DeterministicMath.Sqrt(lowestDistanceSqr)) * factor;
-        }
-        else
-        {
-            //The direction from the line to the circle middle.
-            var direction =  circlePos - lineColPoint;
+                var dir = direction.Normalized();
 
-            result.Separation = direction.Normalized() * (circleArea - DeterministicMath.Sqrt(lowestDistanceSqr)) * factor;
+                result.Separation += dir * (circleArea + DeterministicMath.Sqrt(lowestDistanceSqr)) * factor;
+
+                result.SeparationDirection = dir;
+            }
+            else
+            {
+                //The direction from the line to the circle middle.
+                var direction =  circlePos - lineColPoint;
+
+                var dir = direction.Normalized();
+
+                result.Separation += dir * (circleArea - DeterministicMath.Sqrt(lowestDistanceSqr)) * factor;
+
+                result.SeparationDirection = dir;
+            }
+
+            circlePos += result.Separation;
         }
 
         result.Intersects = true;
