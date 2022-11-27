@@ -15,3 +15,5 @@ Weird commit messages may come as i update this, but remember: it's the only way
 - Object pooling, since computers hates deleting memory.
 
 - Segmented motion for people that want to make fast objects.
+
+- Raycast.
