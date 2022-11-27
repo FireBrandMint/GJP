@@ -20,6 +20,8 @@ public class Shape: XYBoolHolder
     
     int _ID;
 
+    bool _Detecting = false;
+
     public int ID 
     {
         get => _ID;
@@ -41,6 +43,31 @@ public class Shape: XYBoolHolder
         }
     }
 
+    /// <summary>
+    /// Wether or not the shape is detecting other shapes in the simulation.
+    /// Only for objects that need to detect, do not use on objects that just need to be detected.
+    /// Only change this after the simulation is set to something other than NULL, else it's always false.
+    /// </summary>
+    public bool Detecting
+    {
+        get => _Detecting;
+        set
+        {
+            if(value == _Detecting || Simulation == null) return;
+
+            if(value)
+            {
+                Simulation.TickShape(ID, this);
+            }
+            else
+            {
+                Simulation.DontTickShape(ID);
+            }
+
+            _Detecting = value;
+        }
+    }
+
     protected bool Disposed = false;
 
     #region grid AKA simulation
@@ -54,7 +81,7 @@ public class Shape: XYBoolHolder
     /// </summary>
     public CollisionAntenna ObjectUsingIt = null;
 
-    public static long [] GridAddShape (Shape s, XYList<Shape> shapeGrid)
+    protected static long [] GridAddShape (Shape s, XYList<Shape> shapeGrid)
     {
         Vector2 pos = s.Position;
 
@@ -67,7 +94,7 @@ public class Shape: XYBoolHolder
         return shapeGrid.AddNode(s, topLeft, bottomRight);
     }
 
-    public static long[] GridMoveShape (Shape s, XYList<Shape> shapeGrid)
+    protected static long[] GridMoveShape (Shape s, XYList<Shape> shapeGrid)
     {
         long[] pastIdentifier = s.GetGridIdentifier();
 
@@ -98,16 +125,22 @@ public class Shape: XYBoolHolder
         return pastIdentifier;
     }
 
-    public static void GridRemoveShape (Shape s, XYList<Shape> shapeGrid)
+    protected static void GridRemoveShape (Shape s, XYList<Shape> shapeGrid)
     {
         shapeGrid.RemoveValue(s.GetGridIdentifier(), s);
     }
 
-    public static Shape[] GetShapesInGrid (long[] identifier, XYList<Shape> shapeGrid)
+    protected static Shape[] GetShapesInGrid (long[] identifier, XYList<Shape> shapeGrid)
     {
         return shapeGrid.GetValues(identifier);
     }
 
+    /// <summary>
+    /// Extreme internal function, if you don't want to end up crying in the bathroom, please don't use it.
+    /// </summary>
+    /// <param name="s"></param>
+    /// <param name="shapeGrid"></param>
+    /// <returns></returns>
     public static Shape[] GetShapesInGrid (Shape s, XYList<Shape> shapeGrid)
     {
         return shapeGrid.GetValues(s.GetGridIdentifier());
@@ -121,7 +154,7 @@ public class Shape: XYBoolHolder
     public virtual Vector2 Position{get;set;}
 
     /// <summary>
-    /// Wether or not it does not solve collisions and instead
+    /// Wether or not it does not solve collisions by calling CollisionAntenna.ResolveOverlap and instead
     /// just detects if another object is inside.
     /// </summary>
     public bool IntersectOnly = false;
@@ -137,18 +170,21 @@ public class Shape: XYBoolHolder
 
     public virtual void SetGridIdentifier(long[] newValue) => throw new NotImplementedException();
 
+    /// <summary>
+    /// Sets the simulation the shape lives in.
+    /// </summary>
+    /// <param name="_simulation"></param>
+    /// <param name="makeNewId"></param>
+    /// <param name="_id"></param>
     public void SetSimulation(DtCollisionSimulation _simulation, bool makeNewId = true, int _id = -1)
     {
-        if(Simulation != null && Active)
+        if(Simulation != null)
         {
-            Deactivate();
+            Detecting = false;
 
-            if(_simulation != null && makeNewId) ID = _simulation.GetId();
-            else ID = _id;
-
-            Simulation = _simulation;
-            if (_simulation != null) Activate();
-            return;
+            if (Active) Deactivate();
+            
+            Simulation.DontTickShape(ID);
         }
 
         if(_simulation != null && makeNewId) ID = _simulation.GetId();
@@ -156,7 +192,9 @@ public class Shape: XYBoolHolder
 
         Simulation = _simulation;
     } 
-
+    /// <summary>
+    /// Activates the object so it can be detected (or optionally detect) in the simulation.
+    /// </summary>
     public void Activate()
     {
         if(Simulation == null) return;
@@ -169,6 +207,9 @@ public class Shape: XYBoolHolder
         Active = true;
     }
 
+    /// <summary>
+    /// Deactivates the object so it can't be detected or detect in the simulation.
+    /// </summary>
     public void Deactivate()
     {
         if(Simulation == null) return;
@@ -178,13 +219,24 @@ public class Shape: XYBoolHolder
         Active = false;
     }
 
-    public void MoveActive()
+    protected void MoveActive()
     {
         if(Active && Simulation != null) SetGridIdentifier(GridMoveShape(this, Simulation.Grid));
     }
 
+    /// <summary>
+    /// Can the shape be detected (or optionally detect) in the simulation?
+    /// </summary>
+    /// <returns></returns>
     public bool IsActive() => Active;
 
+    /// <summary>
+    /// Used internally on the DtCollisionSimulation class, please don't use it.
+    /// It detects if the objects are intersecting, and if they are, it tells by how
+    /// much they should be separated.
+    /// </summary>
+    /// <param name="poly"></param>
+    /// <param name="result"></param>
     public void IntersectsInfo(Shape poly, ref CollisionResult result)
     {
         Vector2
@@ -236,6 +288,11 @@ public class Shape: XYBoolHolder
         throw new System.Exception($"Shape not implemented! Shape ids: {this.GetType()}, {poly.GetType()}.");
     }
 
+    /// <summary>
+    /// Only detects if 2 objects intersect.
+    /// </summary>
+    /// <param name="poly"></param>
+    /// <returns></returns>
     public bool Intersect(Shape poly)
     {
         Vector2
@@ -329,7 +386,7 @@ public class Shape: XYBoolHolder
         return (arr, arrSize);
     }*/
 
-    public static bool PointInConvexPolygon(Vector2 testPoint, Vector2[] polygon)
+    protected static bool PointInConvexPolygon(Vector2 testPoint, Vector2[] polygon)
     {
         //From: https://stackoverflow.com/questions/1119627/how-to-test-if-a-point-is-inside-of-a-convex-polygon-in-2d-integer-coordinates
 
@@ -394,10 +451,7 @@ public class Shape: XYBoolHolder
         //would much appreciate it.
     }
 
-    /// <summary>
-    /// Method used internally, you should never use it.
-    /// </summary>
-    public void Reuse()
+    protected void Reuse()
     {
         Dispose(false);
     }
