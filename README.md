@@ -8,8 +8,6 @@ Weird commit messages may come as i update this, but remember: it's the only way
 
 # Guide
 
-//TODO: put guide here because no one understands each other's code, we're all different people after all.
-
 - Use the static constructors of the shapes like ConvexPolygon.CreateRect and CircleShape.CreateCircle to create Shape instances.
 
 - Create a simulation with DtCollisionSimulation.
