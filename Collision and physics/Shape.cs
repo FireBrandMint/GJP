@@ -41,7 +41,7 @@ public class Shape: XYBoolHolder
         }
     }
 
-    bool Disposed = false;
+    protected bool Disposed = false;
 
     #region grid AKA simulation
 
@@ -392,5 +392,13 @@ public class Shape: XYBoolHolder
         //TODO: Reminding myself to do object pooling for the XYList too,
         //whoever doesn't want their pc to explode with a big game would
         //would much appreciate it.
+    }
+
+    /// <summary>
+    /// Method used internally, you should never use it.
+    /// </summary>
+    public void Reuse()
+    {
+        Dispose(false);
     }
 }

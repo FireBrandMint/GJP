@@ -91,6 +91,25 @@ public sealed class ConvexPolygon : Shape
         FInt x = length.x * FInt.Half;
         FInt y = length.y * FInt.Half;
 
+        ConvexPolygon poly;
+
+        if(ShapeCashe.TryGetConvex(4, out poly))
+        {
+            var originalModel = poly.GetOriginalModel();
+
+            originalModel[0] = new Vector2(-x, -y);
+            originalModel[1] = new Vector2(-x, y);
+            originalModel[2] = new Vector2(x, y);
+            originalModel[3] = new Vector2(x, -y);
+
+            poly.Position = position;
+            poly.Scale = scale;
+            poly.Rotation = rotation;
+            poly.ObjectUsingIt = objectUsingIt;
+
+            poly.Reuse();
+        }
+
         return new ConvexPolygon(
             new Vector2[]
             {
@@ -114,6 +133,24 @@ public sealed class ConvexPolygon : Shape
     {
         FInt x = length.x * FInt.Half;
         FInt y = length.y * FInt.Half;
+
+        ConvexPolygon poly;
+
+        if(ShapeCashe.TryGetConvex(3, out poly))
+        {
+            var originalModel = poly.GetOriginalModel();
+
+            originalModel[0] = new Vector2(new FInt(), -y);
+            originalModel[1] = new Vector2(-x, y);
+            originalModel[2] = new Vector2(x, y);
+
+            poly.Position = position;
+            poly.Scale = scale;
+            poly.Rotation = rotation;
+            poly.ObjectUsingIt = objectUsingIt;
+
+            poly.Reuse();
+        }
 
         return new ConvexPolygon(
             new Vector2[]
@@ -159,7 +196,7 @@ public sealed class ConvexPolygon : Shape
 
     void UpdateModel()
     {
-        if (Updated) return;
+        if (Updated || Disposed) return;
 
         //solves rotation and scale
         Vector2 center = Vector2.ZERO;
@@ -213,7 +250,7 @@ public sealed class ConvexPolygon : Shape
 
     private void UpdateNormals()
     {
-        if(NormalsUpdated) return;
+        if(NormalsUpdated || Disposed) return;
 
         int len = ResultModel.Length - 1;
 
@@ -250,6 +287,8 @@ public sealed class ConvexPolygon : Shape
     {
         return ResultModel;
     }
+
+    public Vector2[] GetOriginalModel () => OriginalModel;
 
     public Vector2[] GetNormals()
     {
@@ -658,5 +697,21 @@ public sealed class ConvexPolygon : Shape
         }
 
         result.Intersects = true;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if(disposing)
+        {
+            ShapeCashe.TryCasheConvex(this);
+        }
+        else
+        {
+            Disposed = false;
+
+            UpdateModel();
+
+            UpdateNormals();
+        }
     }
 }
