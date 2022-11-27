@@ -111,6 +111,6 @@ public class DtCollisionSimulation
 
     public void DontTickShape(int id)
     {
-        ShapesDetecting.Remove(id);
+        ShapesDetecting.TryRemove(id);
     }
 }

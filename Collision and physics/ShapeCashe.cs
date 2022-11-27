@@ -15,6 +15,8 @@ public static class ShapeCashe
         (5, new List<ConvexPolygon>(50)),
     };
 
+    static List<CircleShape> CircleCashe = new List<CircleShape>(50);
+
     public static void TryCasheConvex (ConvexPolygon poly)
     {
         int count = poly.GetOriginalModel().Length;
@@ -71,5 +73,25 @@ public static class ShapeCashe
 
         end:
         return hasIt;
+    }
+
+    public static void CasheCircle (CircleShape circle)
+    {
+        CircleCashe.Add(circle);
+    }
+
+    public static bool TryGetCircle (out CircleShape circle)
+    {
+        int cInd = CircleCashe.Count - 1;
+        if(cInd != -1)
+        {
+            circle = CircleCashe[cInd];
+            CircleCashe.RemoveAt(cInd);
+
+            return true;
+        }
+
+        circle = null;
+        return false;
     }
 }

@@ -10,9 +10,25 @@ Weird commit messages may come as i update this, but remember: it's the only way
 
 //TODO: put guide here because no one understands each other's code, we're all different people after all.
 
+- Use the static constructors of the shapes like ConvexPolygon.CreateRect and CircleShape.CreateCircle to create Shape instances.
+
+- Create a simulation with DtCollisionSimulation.
+
+- Set the simulation for the Shape with the SetSimulation method found in it.
+
+- Execute the Tick method of the simulation when the game updates.
+
+- After the simulation is set on the shape, use Activate for it to start existing in the simulation or Deactivate to be in stasis, see if it's already existing or not with IsActive.
+
+- Use the Detecting bool of the shape instance after you already set the simulation to make the shape start actually detecting stuff. (not necessary with shapes that just need to be detected like terrain and moving plataforms)
+
+- Keep in mind that the ObjectUsingIt reference on the shape instance is what determines the response to all collision based on the information given to it. The methods found in the interface CollisionAntenna wich the ObjectUsingIt inherits will be signaled when the shape detects something or is detected by something, so write code to handle that.
+
+- Finally, when disposing of a Shape instance, always use the Dispose method found in it.
+
 # Lacking features
 
-- Object pooling, since computers hates deleting memory.
+- Object pooling, since computers hates deleting memory. (almost not lacking)
 
 - Segmented motion for people that want to make fast objects.
 

@@ -35,7 +35,24 @@ public sealed class CircleShape: Shape
 
     long[] GridIdentifier;
 
-    public CircleShape (Vector2 position, FInt area, CollisionAntenna _objectUsingIt)
+    public static CircleShape CreateCircle(Vector2 position, FInt area, CollisionAntenna _objectUsingIt)
+    {
+        CircleShape circle;
+
+        if(ShapeCashe.TryGetCircle(out circle))
+        {
+            circle._Position = position;
+            circle._Area = area;
+            circle.ObjectUsingIt = _objectUsingIt;
+            circle.Reuse();
+
+            return circle;
+        }
+
+        return new CircleShape(position, area, _objectUsingIt);
+    }
+
+    private CircleShape (Vector2 position, FInt area, CollisionAntenna _objectUsingIt)
     {
         _Area = area;
 
@@ -230,5 +247,17 @@ public sealed class CircleShape: Shape
         }
 
         result.Intersects = true;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if(disposing)
+        {
+            ShapeCashe.CasheCircle(this);
+        }
+        else
+        {
+            Disposed = false;
+        }
     }
 }

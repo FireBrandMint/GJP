@@ -314,6 +314,25 @@ public class WTFDictionary<K, T>
         --Lenght;
     }
 
+    public bool TryRemove (K key)
+    {
+        int keyTrue = key.GetHashCode();
+
+        var searchResult = Find(keyTrue);
+
+        int index = searchResult[0];
+
+        var node = MasterList[index];
+
+        if(node.Key != keyTrue) return false;
+
+        MasterList.RemoveAt(index);
+
+        --Lenght;
+
+        return true;
+    }
+
     public bool ContainsKey(K key)
     {
         if(Lenght == 0) return false;

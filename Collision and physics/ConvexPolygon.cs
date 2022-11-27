@@ -108,6 +108,8 @@ public sealed class ConvexPolygon : Shape
             poly.ObjectUsingIt = objectUsingIt;
 
             poly.Reuse();
+
+            return poly;
         }
 
         return new ConvexPolygon(
@@ -150,6 +152,8 @@ public sealed class ConvexPolygon : Shape
             poly.ObjectUsingIt = objectUsingIt;
 
             poly.Reuse();
+
+            return poly;
         }
 
         return new ConvexPolygon(
