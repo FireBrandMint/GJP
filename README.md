@@ -28,7 +28,7 @@ Weird commit messages may come as i update this, but remember: it's the only way
 
 # Lacking features
 
-- Object pooling, since computers hates deleting memory. (almost not lacking)
+- ~~Object pooling, since computers hates deleting memory.~~ (FIXED, please report any bugs)
 
 - Segmented motion for people that want to make fast objects.
 

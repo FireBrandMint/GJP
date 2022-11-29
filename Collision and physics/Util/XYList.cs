@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace GJham.Physics.Util;
@@ -15,8 +14,6 @@ public class XYList<T> where T:XYBoolHolder
 
     WTFDictionary<long, WTFDictionary<long, OneWayNode<T>>> DictX;
 
-    WTFDictionary<long, OneWayNode<T>> ReserveDictionary;
-
     ///<summary>
     ///'capacityY' should always be a very small number like 10.
     ///</summary>
@@ -25,8 +22,6 @@ public class XYList<T> where T:XYBoolHolder
         Multiple = gridSeparation;
 
         DictX = new WTFDictionary<long, WTFDictionary<long, OneWayNode<T>>>(capacityX);
-
-        ReserveDictionary = new WTFDictionary<long, OneWayNode<T>>(CapacityY);
 
         CapacityY = capacityY;
     }
@@ -40,9 +35,12 @@ public class XYList<T> where T:XYBoolHolder
         while (x1 <= x2)
         {
             bool dictExisted;
-            var dictY = DictX.AddIfNonexist(x1, ReserveDictionary, out dictExisted);
 
-            if(!dictExisted) ReserveDictionary = new WTFDictionary<long, OneWayNode<T>>(CapacityY);
+            var rDict1 = GetDictionary();
+
+            var dictY = DictX.AddIfNonexist(x1, rDict1, out dictExisted);
+
+            if(dictExisted) CasheDictionary(rDict1);
 
             long y1f = y1;
 
@@ -81,9 +79,12 @@ public class XYList<T> where T:XYBoolHolder
         for(; x1 <= x2; ++x1)
         {
             bool dictExisted;
-            var dictY = DictX.AddIfNonexist(x1, ReserveDictionary, out dictExisted);
 
-            if(!dictExisted) ReserveDictionary = new WTFDictionary<long, OneWayNode<T>>(CapacityY);
+            var rDict1 = GetDictionary();
+
+            var dictY = DictX.AddIfNonexist(x1, rDict1, out dictExisted);
+
+            if(dictExisted) CasheDictionary(rDict1);
 
 
             for(long y1f = y1; y1f <= y2; ++y1f)
@@ -242,7 +243,7 @@ public class XYList<T> where T:XYBoolHolder
             //ikX+=1;
         }
 
-        if(cInd > 0)for (int i = 0; i < cInd; ++i)
+        if(cInd > 0) for (int i = 0; i < cInd; ++i)
         {
             var toRemove = container[i];
 
@@ -252,9 +253,11 @@ public class XYList<T> where T:XYBoolHolder
 
             if(dictY.Count == 0)
             {
-                //TODO: something with the empty dictionaries
+                //SOLVED: something with the empty dictionaries
                 //that doesn't cause the computer pain,
                 //because this does.
+
+                CasheDictionary(dictY);
 
                 DictX.Remove(toRemove.keyX);
             }
@@ -276,10 +279,65 @@ public class XYList<T> where T:XYBoolHolder
 
         for(int i = 0; i < 4; ++i)
         {
-            XYR[i] /= Multiple;
+            var r = XYR[i];
+
+            if(r == 0) continue;
+
+            XYR[i] = r / Multiple;
         }
 
         return XYR;
+    }
+
+    public long[] GetRanges(Vector2 topLeft, Vector2 bottomRight, long[] ranges)
+    {
+        ranges[0] = (long)topLeft.x;
+        ranges[1] = (long)bottomRight.x;
+        ranges[2] = (long)topLeft.y;
+        ranges[3] = (long)bottomRight.y;
+
+        for(int i = 0; i < 4; ++i)
+        {
+            var r = ranges[i];
+
+            if(r == 0) continue;
+
+            ranges[i] = r / Multiple;
+        }
+
+        return ranges;
+    }
+
+    public bool RangesDiffer (long[] currRanges, Vector2 nextTopLeft, Vector2 nextBottomRight)
+    {
+        long r0 = (long)nextTopLeft.x;
+        long r1 = (long)nextBottomRight.x;
+        long r2 = (long)nextTopLeft.y;
+        long r3 = (long)nextBottomRight.y;
+
+        return
+        !(
+            currRanges[0] == r0 &&
+            currRanges[1] == r1 &&
+            currRanges[2] == r2 &&
+            currRanges[3] == r3
+        );
+    }
+
+    Stack<WTFDictionary<long, OneWayNode<T>>> DictCashe = new Stack<WTFDictionary<long, OneWayNode<T>>>(50);
+
+    private WTFDictionary<long, OneWayNode<T>> GetDictionary()
+    {
+        WTFDictionary<long, OneWayNode<T>> value;
+
+        if(DictCashe.TryPop(out value)) return value;
+        else return new WTFDictionary<long, OneWayNode<T>>(CapacityY);
+    }
+
+    private void CasheDictionary(WTFDictionary<long, OneWayNode<T>> dict)
+    {
+        dict.Clear();
+        DictCashe.Push(dict);
     }
 }
 

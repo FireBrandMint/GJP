@@ -76,6 +76,8 @@ public class Shape: XYBoolHolder
 
     bool Active = false;
 
+    bool GridIdentifierSet = false;
+
     /// <summary>
     /// The object that is using this shape for collision.
     /// </summary>
@@ -91,12 +93,12 @@ public class Shape: XYBoolHolder
 
         Vector2 bottomRight = pos + range;
 
-        return shapeGrid.AddNode(s, topLeft, bottomRight);
+        return shapeGrid.AddNode(s, shapeGrid.GetRanges(topLeft, bottomRight, s.GetGridIdentifier()));
     }
 
     protected static long[] GridMoveShape (Shape s, XYList<Shape> shapeGrid)
     {
-        long[] pastIdentifier = s.GetGridIdentifier();
+        long[] identifier = s.GetGridIdentifier();
 
         Vector2 pos = s.Position;
 
@@ -106,23 +108,18 @@ public class Shape: XYBoolHolder
 
         Vector2 bottomRight = pos + range;
 
-        long[] currIdentifier = shapeGrid.GetRanges(topLeft, bottomRight);
-
-        bool different = false;
-
-        for(int i = 0; i<4; ++i)
-        {
-            different = different || pastIdentifier[i] != currIdentifier[i];
-        }
+        bool different = shapeGrid.RangesDiffer(identifier, topLeft, bottomRight);
 
         if(different)
         {
-            shapeGrid.RemoveValue(pastIdentifier, s);
+            shapeGrid.RemoveValue(identifier, s);
 
-            return shapeGrid.AddNode(s, currIdentifier);
+            shapeGrid.GetRanges(topLeft, bottomRight, identifier);
+
+            shapeGrid.AddNode(s, identifier);
         }
 
-        return pastIdentifier;
+        return identifier;
     }
 
     protected static void GridRemoveShape (Shape s, XYList<Shape> shapeGrid)
@@ -201,6 +198,12 @@ public class Shape: XYBoolHolder
 
         if(!Active)
         {
+            if(!GridIdentifierSet)
+            {
+                SetGridIdentifier(new long[4]);
+                GridIdentifierSet = true;
+            }
+
             SetGridIdentifier(GridAddShape(this, Simulation.Grid));
         }
 
@@ -214,7 +217,7 @@ public class Shape: XYBoolHolder
     {
         if(Simulation == null) return;
 
-        if(Active && Simulation != null) GridRemoveShape(this, Simulation.Grid);
+        if(Active) GridRemoveShape(this, Simulation.Grid);
         
         Active = false;
     }
