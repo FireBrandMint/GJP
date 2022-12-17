@@ -46,18 +46,25 @@ public class Shape: XYBoolHolder
     /// <summary>
     /// Wether or not the shape is detecting other shapes in the simulation.
     /// Only for objects that need to detect, do not use on objects that just need to be detected.
-    /// Only change this after the simulation is set to something other than NULL, else it's always false.
+    /// Only effective if the simulation is not NULL and IsActive is true.
     /// </summary>
     public bool Detecting
     {
         get => _Detecting;
         set
         {
-            if(value == _Detecting || Simulation == null) return;
+            if(value == _Detecting) return;
+
+            if(Simulation == null)
+            {
+                _Detecting = value;
+                return;
+            }
 
             if(value)
             {
                 Simulation.TickShape(ID, this);
+                LastPosition = Position;
             }
             else
             {
@@ -83,6 +90,7 @@ public class Shape: XYBoolHolder
     /// </summary>
     public CollisionAntenna ObjectUsingIt = null;
 
+    //Hairball code function below, only able to be read my me (Guliver Jham)
     protected static long [] GridAddShape (Shape s, XYList<Shape> shapeGrid)
     {
         Vector2 pos = s.Position;
@@ -96,6 +104,7 @@ public class Shape: XYBoolHolder
         return shapeGrid.AddNode(s, shapeGrid.GetRanges(topLeft, bottomRight, s.GetGridIdentifier()));
     }
 
+    //Hairball code function below, only able to be read my me (Guliver Jham)
     protected static long[] GridMoveShape (Shape s, XYList<Shape> shapeGrid)
     {
         long[] identifier = s.GetGridIdentifier();
@@ -151,6 +160,20 @@ public class Shape: XYBoolHolder
     public virtual Vector2 Position{get;set;}
 
     /// <summary>
+    /// Value only used for calculations on objects that take more than 1 Step
+    /// to move. 
+    /// </summary>
+    public Vector2 LastPosition;
+
+    /// <summary>
+    /// Segmented collision only functions if the object is Detecting and this value is higher than 1.
+    /// Any values below or equal to one mean that the object's collision ISN'T segmented.
+    /// Segmented collision is for objects that are very fast still be able to collide with everything
+    /// between it's new position and it's old position.
+    /// </summary>
+    public int StepAmount = 1;
+
+    /// <summary>
     /// Wether or not it does not solve collisions by calling CollisionAntenna.ResolveOverlap and instead
     /// just detects if another object is inside.
     /// </summary>
@@ -160,39 +183,81 @@ public class Shape: XYBoolHolder
     ///Range is a vector
     ///X is the highest absolute x coord of the points list in position Vector.ZERO
     ///Y is the highest absolute y coord of the points list in position Vector.ZERO
+    /// DO NOT USE
     ///</summary>
     public virtual Vector2 GetRange() => throw new NotImplementedException();
-
+    /// <summary>
+    /// DO NOT USE.
+    /// </summary>
+    /// <returns></returns>
     public virtual long[] GetGridIdentifier() => throw new NotImplementedException();
 
+    /// <summary>
+    /// DO NOT USE.
+    /// </summary>
+    /// <param name="newValue"></param>
     public virtual void SetGridIdentifier(long[] newValue) => throw new NotImplementedException();
 
     /// <summary>
+    /// Teleports object instead of moving it.
+    /// Because moving it will probably trigger all objects between
+    /// its new position and its old position if it is Detecting in a Simulation.
+    /// </summary>
+    /// <param name="newPos"></param>
+    public void Teleport (Vector2 newPos)
+    {
+        Position = newPos;
+        LastPosition = newPos;
+    }
+
+    /// <summary>
     /// Sets the simulation the shape lives in.
+    /// If makeNewId is false, then it will set its id to the _id parameter instead!
     /// </summary>
     /// <param name="_simulation"></param>
     /// <param name="makeNewId"></param>
     /// <param name="_id"></param>
     public void SetSimulation(DtCollisionSimulation _simulation, bool makeNewId = true, int _id = -1)
     {
+        bool wasActive = Active;
+
         if(Simulation != null)
         {
-            Detecting = false;
+            //Detecting = false;
 
-            if (Active) Deactivate();
+            if (wasActive)
+            {
+                Deactivate();
+                wasActive = true;
+            }
             
-            Simulation.DontTickShape(ID);
+            if (_Detecting) Simulation.DontTickShape(ID);
         }
 
-        if(_simulation != null && makeNewId) ID = _simulation.GetId();
-        else ID = _id;
+        if(_simulation != null)
+        {
+            if (makeNewId)
+            {
+                ID = _simulation.GetId();
+            }
+            else ID = _id;
+
+            if(wasActive) Activate();
+
+            if (_Detecting) 
+            {
+                Simulation.TickShape(ID, this);
+                LastPosition = Position;
+            }
+        }
 
         Simulation = _simulation;
     } 
     /// <summary>
     /// Activates the object so it can be detected (or optionally detect) in the simulation.
+    /// DEPRECATED, try changing the value of IsActive instead!
     /// </summary>
-    public void Activate()
+    private void Activate()
     {
         if(Simulation == null) return;
 
@@ -206,20 +271,17 @@ public class Shape: XYBoolHolder
 
             SetGridIdentifier(GridAddShape(this, Simulation.Grid));
         }
-
-        Active = true;
     }
 
     /// <summary>
     /// Deactivates the object so it can't be detected or detect in the simulation.
+    /// DEPRECATED, try changing the value of IsActive instead!
     /// </summary>
-    public void Deactivate()
+    private void Deactivate()
     {
         if(Simulation == null) return;
 
         if(Active) GridRemoveShape(this, Simulation.Grid);
-        
-        Active = false;
     }
 
     protected void MoveActive()
@@ -228,10 +290,34 @@ public class Shape: XYBoolHolder
     }
 
     /// <summary>
-    /// Can the shape be detected (or optionally detect) in the simulation?
+    /// Can the shape be detected (or when this is true, detect with Detecting bool) in the simulation?
     /// </summary>
     /// <returns></returns>
-    public bool IsActive() => Active;
+    public bool IsActive
+    {
+        get => Active;
+        set
+        {
+            if (value == Active) return;
+
+            if (Simulation == null)
+            {
+                Active = value;
+                return;
+            }
+
+            if(value)
+            {
+                Activate();
+            }
+            else
+            {
+                Deactivate();
+            }
+            
+            Active = value;
+        }
+    }
 
     /// <summary>
     /// Used internally on the DtCollisionSimulation class, please don't use it.
@@ -389,7 +475,7 @@ public class Shape: XYBoolHolder
         return (arr, arrSize);
     }*/
 
-    protected static bool PointInConvexPolygon(Vector2 testPoint, Vector2[] polygon)
+    protected static bool PointInConvexPolygon(Vector2 testPoint, Span<Vector2> polygon)
     {
         //From: https://stackoverflow.com/questions/1119627/how-to-test-if-a-point-is-inside-of-a-convex-polygon-in-2d-integer-coordinates
 

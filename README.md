@@ -16,11 +16,13 @@ Weird commit messages may come as i update this, but remember: it's the only way
 
 - Execute the Tick method of the simulation when the game updates.
 
-- After the simulation is set on the shape, use Activate for it to start existing in the simulation or Deactivate to be in stasis, see if it's already existing or not with IsActive.
+- After the simulation is set on the shape, set IsActive to true if it exists in the simulation and to false if it's in stasis.
 
 - Use the Detecting bool of the shape instance after you already set the simulation to make the shape start actually detecting stuff. (not necessary with shapes that just need to be detected like terrain and moving plataforms)
 
 - Use the IntersectOnly bool to determine wether or not a object is NOT solid and DOES NOT solve overlap.
+
+- Use the Shape's StepAmount to determine if the motion is segmented or not.
 
 - Keep in mind that the ObjectUsingIt reference on the shape instance is what determines the response to all collision based on the information given to it. The methods found in the interface CollisionAntenna wich the ObjectUsingIt inherits will be signaled when the shape detects something or is detected by something, so write code to handle that.
 
@@ -30,6 +32,6 @@ Weird commit messages may come as i update this, but remember: it's the only way
 
 - ~~Object pooling, since computers hates deleting memory.~~ (FIXED, please report any bugs)
 
-- Segmented motion for people that want to make fast objects.
+- ~~Segmented motion for people that want to make fast objects.~~ (FIXED, please report any bugs)
 
 - Raycast.

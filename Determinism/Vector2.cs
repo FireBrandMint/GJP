@@ -325,6 +325,28 @@ public readonly struct Vector2
         return new Vector2 (v1.x / d2, v1.y / d2);
     }
 
+    public static Vector2 operator % (Vector2 v1, Vector2 v2)
+    {
+        FInt tempX;
+        FInt tempY;
+
+        tempX.RawValue = v1.x.RawValue % v2.x.RawValue;
+        tempY.RawValue = v1.y.RawValue % v2.y.RawValue;
+
+        return new Vector2(tempX, tempY);
+    }
+
+    public static Vector2 operator % (Vector2 v1, int d2)
+    {
+        FInt tempX;
+        FInt tempY;
+
+        tempX.RawValue = v1.x.RawValue % d2;
+        tempY.RawValue = v1.y.RawValue % d2;
+
+        return new Vector2(tempX, tempY);
+    }
+
     public static Vector2 operator << (Vector2 v1, int d2)
     {
         return new Vector2(v1.x << d2, v1.y << d2);

@@ -42,6 +42,7 @@ public sealed class CircleShape: Shape
         if(ShapeCashe.TryGetCircle(out circle))
         {
             circle._Position = position;
+            circle.LastPosition = position;
             circle._Area = area;
             circle.ObjectUsingIt = _objectUsingIt;
             circle.Reuse();
@@ -57,6 +58,8 @@ public sealed class CircleShape: Shape
         _Area = area;
 
         _Position = position;
+
+        LastPosition = position;
 
         ObjectUsingIt = _objectUsingIt;
     }
@@ -127,7 +130,7 @@ public sealed class CircleShape: Shape
 
         int vertsAmount = vertsRaw.Length;
 
-        Vector2[] verts = new Vector2[vertsAmount];
+        Span<Vector2> verts = stackalloc Vector2[vertsAmount];
 
         for(int i = 0; i<vertsAmount; ++i)
         {

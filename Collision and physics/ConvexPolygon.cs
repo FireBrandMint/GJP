@@ -1,3 +1,5 @@
+using System;
+
 public sealed class ConvexPolygon : Shape
 {
     bool Updated = false;
@@ -103,6 +105,7 @@ public sealed class ConvexPolygon : Shape
             originalModel[3] = new Vector2(x, -y);
 
             poly.Position = position;
+            poly.LastPosition = position;
             poly.Scale = scale;
             poly.Rotation = rotation;
             poly.ObjectUsingIt = objectUsingIt;
@@ -147,6 +150,7 @@ public sealed class ConvexPolygon : Shape
             originalModel[2] = new Vector2(x, y);
 
             poly.Position = position;
+            poly.LastPosition = position;
             poly.Scale = scale;
             poly.Rotation = rotation;
             poly.ObjectUsingIt = objectUsingIt;
@@ -178,6 +182,8 @@ public sealed class ConvexPolygon : Shape
         OriginalModel = model;
 
         _pos = position;
+
+        LastPosition = position;
 
         _rot = rotation;
 
@@ -326,8 +332,8 @@ public sealed class ConvexPolygon : Shape
         int aLength = mA.Length;
         int bLength = mB.Length;
 
-        Vector2[] a = new Vector2[aLength];
-        Vector2[] b = new Vector2[bLength];
+        Span<Vector2> a = stackalloc Vector2[aLength];
+        Span<Vector2> b = stackalloc Vector2[bLength];
 
         for(int i = 0; i< aLength; ++i)
         {
@@ -343,7 +349,7 @@ public sealed class ConvexPolygon : Shape
 
         for(int polyi = 0; polyi < 2; ++polyi)
         {
-            Vector2[] polygon = polyi == 0 ? a : b;
+            Span<Vector2> polygon = polyi == 0 ? a : b;
 
             for(int i1 = 0; i1 < polygon.Length; ++i1)
             {
@@ -477,8 +483,8 @@ public sealed class ConvexPolygon : Shape
 
         #endregion
 
-        Vector2[] a = new Vector2[aLength];
-        Vector2[] b = new Vector2[bLength];
+        Span<Vector2> a = stackalloc Vector2[aLength];
+        Span<Vector2> b = stackalloc Vector2[bLength];
 
         for(int i = 0; i< aLength; ++i)
         {
@@ -500,17 +506,15 @@ public sealed class ConvexPolygon : Shape
 
         for(int polyi = 0; polyi < 2; ++polyi)
         {
-            Vector2[] polygon;
+            Span<Vector2> polygon = polyi == 0 ? a : b;
             Vector2[] normals;
 
             if(polyi == 0)
             {
-                polygon = a;
                 normals = this.GetNormals();
             }
             else
             {
-                polygon = b;
                 normals = poly.GetNormals();
             }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 
 //Class that isn't a failure (surprisingly)
@@ -333,6 +334,50 @@ public class WTFDictionary<K, T>
         return true;
     }
 
+    public T GetAndRemove (K key)
+    {
+        int keyTrue = key.GetHashCode();
+
+        var searchResult = Find(keyTrue);
+
+        int index = searchResult[0];
+
+        var node = MasterList[index];
+
+        if(node.Key != keyTrue) throw new Exception($"KEY VALUE '{keyTrue}' DOESN'T EXIST");
+
+        MasterList.RemoveAt(index);
+
+        --Lenght;
+
+        return node.Value;
+    }
+
+    public bool TryGetAndRemove (K key, out T outValue)
+    {
+        int keyTrue = key.GetHashCode();
+
+        var searchResult = Find(keyTrue);
+
+        int index = searchResult[0];
+
+        var node = MasterList[index];
+
+        if(node.Key != keyTrue)
+        {
+            outValue = default(T);
+            return false;
+        }
+
+        MasterList.RemoveAt(index);
+
+        --Lenght;
+
+        outValue = node.Value;
+
+        return true;
+    }
+
     public bool ContainsKey(K key)
     {
         if(Lenght == 0) return false;
@@ -382,7 +427,7 @@ public class WTFDictionary<K, T>
     ///Gets internal key.
     ///WARNING: internal key is extremely volatile.
     ///</summary>
-    public int GetInternalKey(K key)
+    /*public int GetInternalKey(K key)
     {
         int keyTrue = key.GetHashCode();
 
@@ -393,7 +438,7 @@ public class WTFDictionary<K, T>
         if(MasterList[index].Key != keyTrue) throw new Exception($"KEY VALUE '{keyTrue}' DOESN'T EXIST");
 
         return index;
-    }
+    }*/
 
     ///<summary>
     ///Gets value of internal key.
@@ -402,7 +447,7 @@ public class WTFDictionary<K, T>
     ///adding or removing was executed after you got
     ///the key, it WILL result in a bug.
     ///</summary>
-    public KeyValuePair<int,T> GetValueOfIK(int internalKey)
+    /*public KeyValuePair<int,T> GetValueOfIK(int internalKey)
     {
         if(internalKey >= MasterList.Count)
         {
@@ -414,12 +459,12 @@ public class WTFDictionary<K, T>
         }
 
         return MasterList[internalKey];
-    }
+    }*/
 
-    public void SetValueOfIK(int internalKey, T value)
+    /*public void SetValueOfIK(int internalKey, T value)
     {
         MasterList[internalKey] = new KeyValuePair<int, T>(MasterList[internalKey].Key, value);
-    }
+    }*/
 
     ///<summary>
     ///Removes element using internal key.
@@ -428,12 +473,12 @@ public class WTFDictionary<K, T>
     ///adding or removing was executed after you got
     ///the key, it WILL result in a bug.
     ///</summary>
-    public void RemoveByIK(int internalKey)
+    /*public void RemoveByIK(int internalKey)
     {
         MasterList.RemoveAt(internalKey);
 
         --Lenght;
-    }
+    }*/
 
     public int[] GetKeysHash()
     {
@@ -453,6 +498,7 @@ public class WTFDictionary<K, T>
     {
         int count = Count;
 
+        //Most likely gen 1, killed almost immediatly.
         T[] arr = new T[count];
 
         for(int i = 0; i < count; ++i)
@@ -468,6 +514,7 @@ public class WTFDictionary<K, T>
         return MasterList;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private int[] Find (int key)
     {
         //Search algorithm intended to sqrt the amount
@@ -527,6 +574,7 @@ public class WTFDictionary<K, T>
 
         endLoop:
 
+        //Gen 1 allocation, killed almost immediatly.
         return new int[2]
         {
             indexFirst, indexLast
