@@ -47,6 +47,8 @@ public class Shape: XYBoolHolder
     /// Wether or not the shape is detecting other shapes in the simulation.
     /// Only for objects that need to detect, do not use on objects that just need to be detected.
     /// Only effective if the simulation is not NULL and IsActive is true.
+    /// When this is set to true in a simulation, PastPosition is set to the Position value.
+    /// When the Shape enters a simulation with this set to true, PastPosition is set to the Position value.
     /// </summary>
     public bool Detecting
     {
